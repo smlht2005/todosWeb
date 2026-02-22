@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>todosWeb - 待辦事項儀表板</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-4xl mx-auto p-6">
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">todosWeb 📋</h1>
+            <p class="text-gray-500">待辦事項儀表板</p>
+        </header>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-5 gap-4 mb-8" id="stats">
+            <div class="bg-white p-4 rounded-lg shadow text-center">
+                <div class="text-2xl font-bold text-blue-600" id="stat-total">-</div>
+                <div class="text-sm text-gray-500">總計</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow text-center">
+                <div class="text-2xl font-bold text-green-600" id="stat-done">-</div>
+                <div class="text-sm text-gray-500">已完成</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow text-center">
+                <div class="text-2xl font-bold text-yellow-600" id="stat-todo">-</div>
+                <div class="text-sm text-gray-500">待處理</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow text-center">
+                <div class="text-2xl font-bold text-blue-600" id="stat-progress">-</div>
+                <div class="text-sm text-gray-500">進行中</div>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow text-center">
+                <div class="text-2xl font-bold text-purple-600" id="stat-review">-</div>
+                <div class="text-sm text-gray-500">待審查</div>
+            </div>
+        </div>
+
+        <!-- Add Form -->
+        <div class="bg-white p-4 rounded-lg shadow mb-6">
+            <h2 class="text-lg font-semibold mb-3">新增待辦</h2>
+            <form id="add-form" class="flex gap-3">
+                <input type="text" id="new-title" placeholder="輸入待辦事項..." 
+                    class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <select id="new-priority" class="px-4 py-2 border rounded-lg">
+                    <option value="low">低</option>
+                    <option value="medium" selected>中</option>
+                    <option value="high">高</option>
+                </select>
+                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                    新增
+                </button>
+            </form>
+        </div>
+
+        <!-- Todo List -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-lg font-semibold">待辦事項列表</h2>
+                <button onclick="loadTodos()" class="text-blue-600 hover:underline">🔄 重新整理</button>
+            </div>
+            <div id="todo-list" class="divide-y">
+                <div class="p-4 text-center text-gray-500">載入中...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+
+        // Load todos
+        async function loadTodos() {
+            try {
+                const res = await fetch(`${API_URL}/todos`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    renderTodos(data.data);
+                }
+            } catch (e) {
+                document.getElementById('todo-list').innerHTML = 
+                    '<div class="p-4 text-center text-red-500">無法連接伺服器</div>';
+            }
+        }
+
+        // Render todos
+        function renderTodos(todos) {
+            const container = document.getElementById('todo-list');
+            
+            if (todos.length === 0) {
+                container.innerHTML = '<div class="p-4 text-center text-gray-500">尚無待辦事項</div>';
+                return;
+            }
+
+            const statusMap = {
+                'todo': { emoji: '📝', class: 'text-yellow-600' },
+                'in-progress': { emoji: '🔄', class: 'text-blue-600' },
+                'review': { emoji: '👀', class: 'text-purple-600' },
+                'done': { emoji: '✅', class: 'text-green-600' }
+            };
+
+            container.innerHTML = todos.map(todo => {
+                const s = statusMap[todo.status] || statusMap.todo;
+                return `
+                    <div class="p-4 flex items-center justify-between hover:bg-gray-50">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">${s.emoji}</span>
+                            <div>
+                                <div class="font-medium ${todo.status === 'done' ? 'line-through text-gray-400' : ''}">${todo.title}</div>
+                                <div class="text-sm text-gray-500">
+                                    ${todo.id} · ${todo.priority === 'high' ? '🔴 高' : todo.priority === 'medium' ? '🟡 中' : '🟢 低'}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="updateStatus('${todo.id}', 'done')" class="text-green-600 hover:bg-green-50 px-3 py-1 rounded">✅</button>
+                            <button onclick="deleteTodo('${todo.id}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Load stats
+        async function loadStats() {
+            try {
+                const res = await fetch(`${API_URL}/stats`);
+                const data = await res.json();
+                
+                if (data.success) {
+                    const s = data.data;
+                    document.getElementById('stat-total').textContent = s.total;
+                    document.getElementById('stat-done').textContent = s.done;
+                    document.getElementById('stat-todo').textContent = s.todo;
+                    document.getElementById('stat-progress').textContent = s.in_progress;
+                    document.getElementById('stat-review').textContent = s.review;
+                }
+            } catch (e) {
+                console.error('Stats load failed:', e);
+            }
+        }
+
+        // Add todo
+        document.getElementById('add-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const title = document.getElementById('new-title').value;
+            const priority = document.getElementById('new-priority').value;
+            
+            if (!title) return;
+
+            await fetch(`${API_URL}/todos`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, status: 'todo', priority })
+            });
+
+            document.getElementById('new-title').value = '';
+            loadTodos();
+            loadStats();
+        });
+
+        // Update status
+        async function updateStatus(id, status) {
+            await fetch(`${API_URL}/todos/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: '', status, priority: 'medium' })
+            });
+            loadTodos();
+            loadStats();
+        }
+
+        // Delete todo
+        async function deleteTodo(id) {
+            if (!confirm('確定刪除？')) return;
+            
+            await fetch(`${API_URL}/todos/${id}`, { method: 'DELETE' });
+            loadTodos();
+            loadStats();
+        }
+
+        // Init
+        loadTodos();
+        loadStats();
+    </script>
+</body>
+</html>
