@@ -38,6 +38,7 @@ class TodoCreate(BaseModel):
     title: str
     status: str = "todo"
     priority: str = "medium"
+    type: str = "task"
 
 class Stats(BaseModel):
     total: int
@@ -48,8 +49,10 @@ class Stats(BaseModel):
 
 # Database helper
 def get_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=10.0)
     conn.row_factory = sqlite3.Row
+    # Enable WAL mode for better concurrent access
+    conn.execute("PRAGMA journal_mode=WAL")
     return conn
 
 @app.get("/")
@@ -92,8 +95,8 @@ def create_todo(todo: TodoCreate):
     
     conn = get_db()
     conn.execute(
-        "INSERT INTO todos (id, title, status, priority, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-        (todo_id, todo.title, todo.status, todo.priority, now, now)
+        "INSERT INTO todos (id, type, title, status, priority, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (todo_id, todo.type, todo.title, todo.status, todo.priority, now, now)
     )
     conn.commit()
     conn.close()

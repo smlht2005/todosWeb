@@ -72,20 +72,28 @@
 
 ### API 測試
 ```
-GET /api/stats
-✅ 200 OK
+[Test 1] GET /api/stats ✅ 200 OK
 {
-  "total": 26,
-  "done": 9,
-  "todo": 11,
-  "in_progress": 5,
-  "review": 1
+  "success": true,
+  "data": {
+    "total": 26,
+    "done": 9,
+    "todo": 11,
+    "in_progress": 5,
+    "review": 1
+  }
 }
+
+[Test 2] POST /api/todos ✅ 200 OK
+{"success":true,"data":{"id":"T96774"}}
+
+[Test 3] GET /api/todos ✅ 200 OK
+待辦列表成功回傳
 ```
 
-### 發現問題
-- ❌ FastAPI 未安裝 → 已修復
-- ⚠️ 前端需啟動 local server 才能運作
+### 發現問題與修復
+- ❌ database is locked → 加 timeout + WAL mode
+- ❌ type 欄位缺失 → 新增 type 欄位
 
 ---
 
