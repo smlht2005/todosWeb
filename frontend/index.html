@@ -3,192 +3,449 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>todosWeb - 待辦事項儀表板</title>
+    <title>待辦事項 | Task Manager</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary: #E4432D;
+            --primary-light: #fce8e4;
+            --success: #DB3A2F;
+            --bg-gradient: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        
         body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Arial", "Noto Sans TC", "Microsoft JhengHei", sans-serif; 
+            font-family: 'Inter', 'Noto Sans TC', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-gradient);
+            min-height: 100vh;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: var(--primary-light);
+        }
+        
+        .stat-card.active {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.5s ease;
+        }
+        
+        .todo-item {
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.2s ease;
+        }
+        
+        .todo-item:hover {
+            background: #fafafa;
+        }
+        
+        .todo-item.completed {
+            opacity: 0.6;
+        }
+        
+        .todo-item.completed .todo-title {
+            text-decoration: line-through;
+            color: #999;
+        }
+        
+        .quick-add {
+            background: white;
+            border-radius: 12px;
+            padding: 16px 24px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .quick-add input {
+            border: none;
+            outline: none;
+            font-size: 16px;
+            flex: 1;
+        }
+        
+        .quick-add input::placeholder {
+            color: #aaa;
+        }
+        
+        .priority-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .priority-high { background: #E4432D; }
+        .priority-medium { background: #FFB020; }
+        .priority-low { background: #2BC853; }
+        
+        .tab-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            color: #666;
+        }
+        
+        .tab-btn:hover {
+            background: #f5f5f5;
+        }
+        
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 20px;
+            color: #ddd;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary:hover {
+            background: #d13626;
+            transform: translateY(-1px);
         }
     </style>
 </head>
-<body class="bg-gray-50">
-    <div class="max-w-4xl mx-auto p-6">
+<body class="min-h-screen py-8">
+    <div class="max-w-3xl mx-auto px-4">
+        
         <!-- Header -->
         <header class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-800">todosWeb 📋</h1>
-            <p class="text-gray-500">待辦事項儀表板</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800"><i class="fas fa-clipboard-list text-red-500 mr-2"></i>我的待辦</h1>
+                    <p class="text-gray-500 mt-1" id="current-date"></p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="text-right">
+                        <div class="text-sm text-gray-500">完成進度</div>
+                        <div class="text-2xl font-bold text-gray-800" id="progress-percent">0%</div>
+                    </div>
+                    <svg class="progress-ring" width="60" height="60">
+                        <circle cx="30" cy="30" r="25" fill="none" stroke="#eee" stroke-width="6"/>
+                        <circle class="progress-ring-circle" cx="30" cy="30" r="25" fill="none" stroke="#E4432D" stroke-width="6" stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="157" id="progress-ring"/>
+                    </svg>
+                </div>
+            </div>
         </header>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-5 gap-4 mb-8" id="stats">
-            <div class="bg-white p-4 rounded-lg shadow text-center">
-                <div class="text-2xl font-bold text-blue-600" id="stat-total">-</div>
-                <div class="text-sm text-gray-500">總計</div>
-            </div>
-            <div class="bg-white p-4 rounded-lg shadow text-center">
-                <div class="text-2xl font-bold text-green-600" id="stat-done">-</div>
-                <div class="text-sm text-gray-500">已完成</div>
-            </div>
-            <div class="bg-white p-4 rounded-lg shadow text-center">
-                <div class="text-2xl font-bold text-yellow-600" id="stat-todo">-</div>
-                <div class="text-sm text-gray-500">待處理</div>
-            </div>
-            <div class="bg-white p-4 rounded-lg shadow text-center">
-                <div class="text-2xl font-bold text-blue-600" id="stat-progress">-</div>
-                <div class="text-sm text-gray-500">進行中</div>
-            </div>
-            <div class="bg-white p-4 rounded-lg shadow text-center">
-                <div class="text-2xl font-bold text-purple-600" id="stat-review">-</div>
-                <div class="text-sm text-gray-500">待審查</div>
-            </div>
-        </div>
-
-        <!-- Add Form -->
-        <div class="bg-white p-4 rounded-lg shadow mb-6">
-            <h2 class="text-lg font-semibold mb-3">新增待辦</h2>
-            <form id="add-form" class="flex gap-3">
-                <input type="text" id="new-title" placeholder="輸入待辦事項..." 
-                    class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <select id="new-priority" class="px-4 py-2 border rounded-lg">
-                    <option value="low">低</option>
-                    <option value="medium" selected>中</option>
-                    <option value="high">高</option>
+        <!-- Quick Add -->
+        <div class="quick-add mb-6">
+            <form id="quick-add-form" class="flex items-center gap-4">
+                <i class="fas fa-plus text-gray-400"></i>
+                <input type="text" id="quick-add-input" placeholder="新增任務... (按 Enter 新增)" class="w-full">
+                <select id="quick-priority" class="bg-gray-100 rounded-lg px-3 py-2 text-sm">
+                    <option value="low">🟢 低</option>
+                    <option value="medium" selected>🟡 中</option>
+                    <option value="high">🔴 高</option>
                 </select>
-                <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                    新增
-                </button>
             </form>
         </div>
 
+        <!-- Tabs -->
+        <div class="flex items-center gap-2 mb-6 overflow-x-auto">
+            <button class="tab-btn active" onclick="filterTodos('all')" data-filter="all">
+                <i class="fas fa-list"></i> 全部 <span class="ml-1 bg-gray-200 px-2 py-0.5 rounded-full text-xs" id="count-all">0</span>
+            </button>
+            <button class="tab-btn" onclick="filterTodos('todo')" data-filter="todo">
+                <i class="far fa-circle"></i> 待處理 <span class="ml-1 bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs" id="count-todo">0</span>
+            </button>
+            <button class="tab-btn" onclick="filterTodos('in-progress')" data-filter="in-progress">
+                <i class="fas fa-spinner fa-spin"></i> 進行中 <span class="ml-1 bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs" id="count-in-progress">0</span>
+            </button>
+            <button class="tab-btn" onclick="filterTodos('review')" data-filter="review">
+                <i class="fas fa-search"></i> 待審查 <span class="ml-1 bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full text-xs" id="count-review">0</span>
+            </button>
+            <button class="tab-btn" onclick="filterTodos('done')" data-filter="done">
+                <i class="fas fa-check-circle"></i> 已完成 <span class="ml-1 bg-green-100 text-green-600 px-2 py-0.5 rounded-full text-xs" id="count-done">0</span>
+            </button>
+            <button class="tab-btn" onclick="filterTodos('bugs')" data-filter="bugs">
+                <i class="fas fa-bug"></i> Bugs <span class="ml-1 bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs" id="count-bugs">0</span>
+            </button>
+        </div>
+
         <!-- Todo List -->
-        <div class="bg-white rounded-lg shadow">
-            <div class="p-4 border-b flex justify-between items-center">
-                <h2 class="text-lg font-semibold">待辦事項列表</h2>
-                <button onclick="loadTodos()" class="text-blue-600 hover:underline">🔄 重新整理</button>
-            </div>
-            <div id="todo-list" class="divide-y">
-                <div class="p-4 text-center text-gray-500">載入中...</div>
+        <div class="card" id="todo-card">
+            <div id="todo-list">
+                <div class="p-8 text-center text-gray-400">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <div>載入中...</div>
+                </div>
             </div>
         </div>
+        
+        <!-- Bug Section (Hidden by default) -->
+        <div class="card hidden" id="bug-card">
+            <div id="bug-list">
+                <div class="p-8 text-center text-gray-400">
+                    <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                    <div>載入中...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-8 text-center text-gray-400 text-sm">
+            <p>按 <kbd class="bg-gray-200 px-2 py-1 rounded">Enter</kbd> 新增任務 · 點擊任務完成</p>
+        </footer>
+
     </div>
 
     <script>
         const API_URL = 'http://localhost:8000/api';
-
-        // Load todos
-        async function loadTodos() {
+        let allTodos = [];
+        let allBugs = [];
+        let currentFilter = 'all';
+        
+        // Set current date
+        const today = new Date();
+        const twMonths = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+        const twDays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+        document.getElementById('current-date').textContent = `${today.getFullYear()}-${today.getMonth() + 1}-${today.getDate()} · ${twDays[today.getDay()]}`;
+        
+        // Load data
+        async function loadData() {
             try {
-                const res = await fetch(`${API_URL}/todos`);
-                const data = await res.json();
+                const [todosRes, bugsRes, statsRes] = await Promise.all([
+                    fetch(`${API_URL}/todos`),
+                    fetch(`${API_URL}/bugs`),
+                    fetch(`${API_URL}/stats`),
+                    fetch(`${API_URL}/bug-stats`)
+                ]);
                 
-                if (data.success) {
-                    renderTodos(data.data);
-                }
+                const todosData = await todosRes.json();
+                const bugsData = await bugsRes.json();
+                const statsData = await statsRes.json();
+                
+                if (todosData.success) allTodos = todosData.data;
+                if (bugsData.success) allBugs = bugsData.data;
+                
+                updateStats(statsData.data);
+                renderTodos(allTodos);
             } catch (e) {
-                document.getElementById('todo-list').innerHTML = 
-                    '<div class="p-4 text-center text-red-500">無法連接伺服器</div>';
+                document.getElementById('todo-list').innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-wifi"></i>
+                        <div>無法連接伺服器</div>
+                        <button onclick="loadData()" class="btn-primary mt-4">重試</button>
+                    </div>
+                `;
             }
         }
-
+        
+        // Update stats
+        function updateStats(stats) {
+            document.getElementById('count-all').textContent = stats.total;
+            document.getElementById('count-todo').textContent = stats.todo;
+            document.getElementById('count-in-progress').textContent = stats.in_progress;
+            document.getElementById('count-review').textContent = stats.review;
+            document.getElementById('count-done').textContent = stats.done;
+            
+            const percent = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
+            document.getElementById('progress-percent').textContent = `${percent}%`;
+            
+            const circumference = 2 * Math.PI * 25;
+            const offset = circumference - (percent / 100) * circumference;
+            document.getElementById('progress-ring').style.strokeDashoffset = offset;
+        }
+        
+        // Filter todos
+        function filterTodos(filter) {
+            currentFilter = filter;
+            
+            // Update tab buttons
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.filter === filter) btn.classList.add('active');
+            });
+            
+            if (filter === 'bugs') {
+                document.getElementById('todo-card').classList.add('hidden');
+                document.getElementById('bug-card').classList.remove('hidden');
+                renderBugs(allBugs);
+            } else {
+                document.getElementById('bug-card').classList.add('hidden');
+                document.getElementById('todo-card').classList.remove('hidden');
+                
+                if (filter === 'all') {
+                    renderTodos(allTodos);
+                } else {
+                    renderTodos(allTodos.filter(t => t.status === filter));
+                }
+            }
+        }
+        
         // Render todos
         function renderTodos(todos) {
             const container = document.getElementById('todo-list');
             
             if (todos.length === 0) {
-                container.innerHTML = '<div class="p-4 text-center text-gray-500">尚無待辦事項</div>';
-                return;
-            }
-
-            const statusMap = {
-                'todo': { emoji: '📝', class: 'text-yellow-600' },
-                'in-progress': { emoji: '🔄', class: 'text-blue-600' },
-                'review': { emoji: '👀', class: 'text-purple-600' },
-                'done': { emoji: '✅', class: 'text-green-600' }
-            };
-
-            container.innerHTML = todos.map(todo => {
-                const s = statusMap[todo.status] || statusMap.todo;
-                return `
-                    <div class="p-4 flex items-center justify-between hover:bg-gray-50">
-                        <div class="flex items-center gap-3">
-                            <span class="text-2xl">${s.emoji}</span>
-                            <div>
-                                <div class="font-medium ${todo.status === 'done' ? 'line-through text-gray-400' : ''}">${todo.title}</div>
-                                <div class="text-sm text-gray-500">
-                                    ${todo.id} · ${todo.priority === 'high' ? '🔴 高' : todo.priority === 'medium' ? '🟡 中' : '🟢 低'}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="updateStatus('${todo.id}', 'done')" class="text-green-600 hover:bg-green-50 px-3 py-1 rounded">✅</button>
-                            <button onclick="deleteTodo('${todo.id}')" class="text-red-600 hover:bg-red-50 px-3 py-1 rounded">🗑️</button>
-                        </div>
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-clipboard-list"></i>
+                        <div class="text-lg mb-2">沒有待辦事項</div>
+                        <div class="text-sm">在上方輸入框新增任務吧！</div>
                     </div>
                 `;
-            }).join('');
-        }
-
-        // Load stats
-        async function loadStats() {
-            try {
-                const res = await fetch(`${API_URL}/stats`);
-                const data = await res.json();
-                
-                if (data.success) {
-                    const s = data.data;
-                    document.getElementById('stat-total').textContent = s.total;
-                    document.getElementById('stat-done').textContent = s.done;
-                    document.getElementById('stat-todo').textContent = s.todo;
-                    document.getElementById('stat-progress').textContent = s.in_progress;
-                    document.getElementById('stat-review').textContent = s.review;
-                }
-            } catch (e) {
-                console.error('Stats load failed:', e);
+                return;
             }
-        }
-
-        // Add todo
-        document.getElementById('add-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const title = document.getElementById('new-title').value;
-            const priority = document.getElementById('new-priority').value;
             
-            if (!title) return;
-
+            const statusIcons = {
+                'todo': '<i class="fas fa-circle text-gray-400"></i>',
+                'in-progress': '<i class="fas fa-spinner fa-spin text-blue-500"></i>',
+                'review': '<i class="fas fa-search text-purple-500"></i>',
+                'done': '<i class="fas fa-check-circle text-green-500"></i>'
+            };
+            
+            container.innerHTML = todos.map(todo => `
+                <div class="todo-item flex items-center gap-4 animate-fade-in ${todo.status === 'done' ? 'completed' : ''}">
+                    <button onclick="toggleTodo('${todo.id}')" class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${todo.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-green-500'}">
+                        ${todo.status === 'done' ? '<i class="fas fa-check text-xs"></i>' : ''}
+                    </button>
+                    <div class="flex-1">
+                        <div class="todo-title font-medium ${todo.status === 'done' ? 'line-through text-gray-400' : 'text-gray-800'}">${todo.title}</div>
+                        <div class="text-sm text-gray-400 flex items-center gap-2">
+                            <span class="priority-dot priority-${todo.priority}"></span>
+                            <span>${todo.id}</span>
+                        </div>
+                    </div>
+                    <span class="text-xl">${statusIcons[todo.status] || '📝'}</span>
+                    <button onclick="deleteTodo('${todo.id}')" class="text-gray-300 hover:text-red-500 transition">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+        
+        // Render bugs
+        function renderBugs(bugs) {
+            const container = document.getElementById('bug-list');
+            
+            if (bugs.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-bug"></i>
+                        <div class="text-lg mb-2">沒有 Bugs</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = bugs.map(bug => `
+                <div class="todo-item flex items-center gap-4 ${bug.status === 'fixed' ? 'completed' : ''}">
+                    <span class="text-2xl">${bug.severity === 'high' || bug.severity === 'major' ? '🔴' : bug.severity === 'medium' ? '🟡' : '🟢'}</span>
+                    <div class="flex-1">
+                        <div class="todo-title font-medium ${bug.status === 'fixed' ? 'line-through text-gray-400' : 'text-gray-800'}">${bug.title}</div>
+                        <div class="text-sm text-gray-400">${bug.id} · ${bug.status}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Quick add
+        document.getElementById('quick-add-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('quick-add-input');
+            const priority = document.getElementById('quick-priority').value;
+            
+            if (!input.value.trim()) return;
+            
             await fetch(`${API_URL}/todos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, status: 'todo', priority })
+                body: JSON.stringify({ 
+                    title: input.value.trim(), 
+                    status: 'todo', 
+                    priority 
+                })
             });
-
-            document.getElementById('new-title').value = '';
-            loadTodos();
-            loadStats();
+            
+            input.value = '';
+            loadData();
         });
-
-        // Update status
-        async function updateStatus(id, status) {
+        
+        // Toggle todo
+        async function toggleTodo(id) {
+            const todo = allTodos.find(t => t.id === id);
+            if (!todo) return;
+            
+            const newStatus = todo.status === 'done' ? 'todo' : 'done';
             await fetch(`${API_URL}/todos/${id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title: '', status, priority: 'medium' })
+                body: JSON.stringify({ status: newStatus })
             });
-            loadTodos();
-            loadStats();
+            
+            loadData();
         }
-
+        
         // Delete todo
         async function deleteTodo(id) {
-            if (!confirm('確定刪除？')) return;
+            if (!confirm('確定要刪除這個任務嗎？')) return;
             
             await fetch(`${API_URL}/todos/${id}`, { method: 'DELETE' });
-            loadTodos();
-            loadStats();
+            loadData();
         }
-
-        // Init
-        loadTodos();
-        loadStats();
+        
+        // Initial load
+        loadData();
     </script>
 </body>
 </html>

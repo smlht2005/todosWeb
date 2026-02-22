@@ -129,6 +129,47 @@ def delete_todo(todo_id: str):
     
     return {"success": True, "message": "Deleted"}
 
+@app.get("/api/bugs")
+def get_bugs():
+    """取得所有 bugs"""
+    conn = get_db()
+    bugs = conn.execute("SELECT id, title, status, severity FROM bugs ORDER BY id").fetchall()
+    conn.close()
+    return {"success": True, "data": [dict(row) for row in bugs]}
+
+@app.get("/api/bug-stats")
+def get_bug_stats():
+    """取得 Bug 統計"""
+    conn = get_db()
+    
+    # Total
+    total = conn.execute("SELECT COUNT(*) FROM bugs").fetchone()[0]
+    
+    # By status
+    open_bugs = conn.execute("SELECT COUNT(*) FROM bugs WHERE status = 'open'").fetchone()[0]
+    in_progress = conn.execute("SELECT COUNT(*) FROM bugs WHERE status = 'in-progress'").fetchone()[0]
+    fixed = conn.execute("SELECT COUNT(*) FROM bugs WHERE status = 'fixed'").fetchone()[0]
+    
+    # By severity
+    high = conn.execute("SELECT COUNT(*) FROM bugs WHERE severity = 'high' OR severity = 'major'").fetchone()[0]
+    medium = conn.execute("SELECT COUNT(*) FROM bugs WHERE severity = 'medium'").fetchone()[0]
+    low = conn.execute("SELECT COUNT(*) FROM bugs WHERE severity = 'low' OR severity = 'minor'").fetchone()[0]
+    
+    conn.close()
+    
+    return {
+        "success": True,
+        "data": {
+            "total": total,
+            "open": open_bugs,
+            "in_progress": in_progress,
+            "fixed": fixed,
+            "high": high,
+            "medium": medium,
+            "low": low
+        }
+    }
+
 @app.get("/api/stats")
 def get_stats():
     """取得統計"""
