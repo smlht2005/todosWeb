@@ -231,6 +231,23 @@
             </div>
         </div>
         
+        <!-- Detail Modal -->
+        <div id="detail-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 animate-fade-in">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-bold text-gray-800">任務詳情</h3>
+                        <button onclick="closeDetailModal()" class="text-gray-400 hover:text-gray-600">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    <div id="detail-content">
+                        <!-- Dynamic content -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- Bug Section (Hidden by default) -->
         <div class="card hidden" id="bug-card">
             <div id="bug-list">
@@ -354,9 +371,16 @@
                 'done': '<i class="fas fa-check-circle text-green-500"></i>'
             };
             
+            const statusLabels = {
+                'todo': '待處理',
+                'in-progress': '進行中',
+                'review': '待審查',
+                'done': '已完成'
+            };
+            
             container.innerHTML = todos.map(todo => `
-                <div class="todo-item flex items-center gap-4 animate-fade-in ${todo.status === 'done' ? 'completed' : ''}">
-                    <button onclick="toggleTodo('${todo.id}')" class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${todo.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-green-500'}">
+                <div class="todo-item flex items-center gap-4 animate-fade-in cursor-pointer hover:bg-gray-50 ${todo.status === 'done' ? 'completed' : ''}" onclick="showTodoDetail('${todo.id}')">
+                    <button onclick="event.stopPropagation(); toggleTodo('${todo.id}')" class="w-6 h-6 rounded-full border-2 flex items-center justify-center ${todo.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-gray-300 hover:border-green-500'}">
                         ${todo.status === 'done' ? '<i class="fas fa-check text-xs"></i>' : ''}
                     </button>
                     <div class="flex-1">
@@ -364,14 +388,124 @@
                         <div class="text-sm text-gray-400 flex items-center gap-2">
                             <span class="priority-dot priority-${todo.priority}"></span>
                             <span>${todo.id}</span>
+                            <span class="text-xs bg-gray-100 px-2 py-0.5 rounded">${statusLabels[todo.status] || todo.status}</span>
                         </div>
                     </div>
                     <span class="text-xl">${statusIcons[todo.status] || '📝'}</span>
-                    <button onclick="deleteTodo('${todo.id}')" class="text-gray-300 hover:text-red-500 transition">
+                    <button onclick="event.stopPropagation(); deleteTodo('${todo.id}')" class="text-gray-300 hover:text-red-500 transition">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
             `).join('');
+        }
+        
+        // Show todo detail modal
+        function showTodoDetail(todoId) {
+            const todo = allTodos.find(t => t.id === todoId);
+            if (!todo) return;
+            
+            const statusLabels = {
+                'todo': '待處理',
+                'in-progress': '進行中',
+                'review': '待審查',
+                'done': '已完成'
+            };
+            
+            const priorityLabels = {
+                'high': '🔴 高',
+                'medium': '🟡 中',
+                'low': '🟢 低'
+            };
+            
+            const formatDate = (timestamp) => {
+                if (!timestamp) return '-';
+                const date = new Date(timestamp * 1000);
+                return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+            };
+            
+            const modal = document.getElementById('detail-modal');
+            const content = document.getElementById('detail-content');
+            
+            content.innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-sm text-gray-500">標題</label>
+                        <div class="text-lg font-medium text-gray-800">${todo.title}</div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-sm text-gray-500">狀態</label>
+                            <div class="font-medium">${statusLabels[todo.status] || todo.status}</div>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-500">優先級</label>
+                            <div class="font-medium">${priorityLabels[todo.priority] || todo.priority}</div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-sm text-gray-500">建立時間</label>
+                            <div class="text-sm text-gray-600">${formatDate(todo.created_at)}</div>
+                        </div>
+                        <div>
+                            <label class="text-sm text-gray-500">更新時間</label>
+                            <div class="text-sm text-gray-600">${formatDate(todo.updated_at)}</div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-500">ID</label>
+                        <div class="font-mono text-sm bg-gray-100 px-2 py-1 rounded">${todo.id}</div>
+                    </div>
+                    <div class="flex gap-2 pt-4">
+                        <button onclick="closeDetailModal(); toggleTodo('${todo.id}')" class="flex-1 btn-primary">
+                            ${todo.status === 'done' ? '<i class="fas fa-undo mr-2"></i>恢復' : '<i class="fas fa-check mr-2"></i>完成'}
+                        </button>
+                        <button onclick="editTodoTitle('${todo.id}')" class="px-4 py-2 bg-blue-100 text-blue-600 rounded-lg hover:bg-blue-200 transition">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button onclick="closeDetailModal(); if(confirm('確定要刪除這個任務嗎？')) deleteTodo('${todo.id}')" class="px-4 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        
+        // Close detail modal
+        function closeDetailModal() {
+            const modal = document.getElementById('detail-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+        
+        // Close modal on outside click
+        document.getElementById('detail-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeDetailModal();
+        });
+        
+        // Edit todo title
+        async function editTodoTitle(todoId) {
+            const todo = allTodos.find(t => t.id === todoId);
+            if (!todo) return;
+            
+            const newTitle = prompt('修改任務標題:', todo.title);
+            if (!newTitle || newTitle === todo.title) return;
+            
+            await fetch(`${API_URL}/todos/${todoId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    title: newTitle, 
+                    status: todo.status,
+                    priority: todo.priority
+                })
+            });
+            
+            closeDetailModal();
+            loadData();
         }
         
         // Render bugs
